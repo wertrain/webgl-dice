@@ -20,7 +20,7 @@ var webgldice = {};
     SimpleGL.prototype.clear = function(r, g, b) {
         this.gl.clearColor(r, g, b, 1.0);
         this.gl.clearDepth(1.0);
-        this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+        this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
     };
     SimpleGL.prototype.loadFile = function(url, data, successCallback, errorCallback) {
         var request = new XMLHttpRequest();
@@ -69,6 +69,13 @@ var webgldice = {};
         }
         return program;
     };
+    SimpleGL.prototype.createVBO = function(data) {
+        var vbo = this.gl.createBuffer();
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, vbo);
+        this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(data), this.gl.STATIC_DRAW);
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, null);
+        return vbo;
+    };
     SimpleGL.prototype.createShaders = function(shaderFileUrls, successCallback, errorCallback) {
         var compiled = 0;
         var completed = shaderFileUrls.length;
@@ -82,7 +89,7 @@ var webgldice = {};
             } else if (++compiled === completed) {
                 var program = that.linkProgram(shaders[0], shaders[1]);
                 that.gl.useProgram(program);
-                successCallback();
+                successCallback(shaders[0], shaders[1], program);
             }
         }
         for (var i = 0; i < shaderFileUrls.length; ++i) {
@@ -92,13 +99,47 @@ var webgldice = {};
     SimpleGL.prototype.getGL = function() {
         return this.gl;
     };
+    SimpleGL.prototype.getWidth = function() {
+        return this.canvas.width;
+    };
+    SimpleGL.prototype.getHeight = function() {
+        return this.canvas.height;
+    };
     webgldice.SimpleGL = SimpleGL;
 }());
 
 var main = function() {
     var sgl = new webgldice.SimpleGL();
     sgl.initalize('canvas', 640, 480);
-    sgl.createShaders(['/shaders/vertex.vs', '/shaders/fragment.fs'], function() {
+    
+    sgl.createShaders(['/shaders/vertex.vs', '/shaders/fragment.fs'], function(vs, fs, program) {
         sgl.clear(0.0, 0.0, 255.0);
+        var gl = sgl.getGL();
+        var attLocation = gl.getAttribLocation(program, 'position');
+        var attStride = 3;
+        var vertexPosition = [
+             0.0, 1.0, 0.0,
+             1.0, 0.0, 0.0,
+            -1.0, 0.0, 0.0
+        ];
+        var vbo = sgl.createVBO(vertexPosition);
+        gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+        gl.enableVertexAttribArray(attLocation);
+        gl.vertexAttribPointer(attLocation, attStride, gl.FLOAT, false, 0, 0);
+        
+        var minMatrix = new matIV();
+        var mtxModel = minMatrix.identity(minMatrix.create());
+        var mtxView = minMatrix.identity(minMatrix.create());
+        var mtxProj = minMatrix.identity(minMatrix.create());
+        var mtxMVP = minMatrix.identity(minMatrix.create());
+        minMatrix.lookAt([0.0, 1.0, 3.0], [0, 0, 0], [0, 1, 0], mtxView);
+        minMatrix.perspective(90, sgl.getWidth() / sgl.getHeight(), 0.1, 100, mtxProj);
+        minMatrix.multiply(mtxProj, mtxView, mtxMVP);
+        minMatrix.multiply(mtxMVP, mtxModel, mtxMVP);
+        
+        var uniLocation = gl.getUniformLocation(program, 'mvpMatrix');
+        gl.uniformMatrix4fv(uniLocation, false, mtxMVP);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+        gl.flush();
     });
 }();
