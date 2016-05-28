@@ -19,6 +19,7 @@ var webgldice = {};
     };
     SimpleGL.prototype.clear = function(r, g, b) {
         this.gl.clearColor(r, g, b, 1.0);
+        this.gl.clearDepth(1.0);
         this.gl.clear(this.gl.COLOR_BUFFER_BIT);
     };
     SimpleGL.prototype.loadFile = function(url, data, successCallback, errorCallback) {
@@ -87,7 +88,10 @@ var webgldice = {};
         for (var i = 0; i < shaderFileUrls.length; ++i) {
             this.loadFile(shaderFileUrls[i], i, innerCallback);
         }
-    }
+    };
+    SimpleGL.prototype.getGL = function() {
+        return this.gl;
+    };
     webgldice.SimpleGL = SimpleGL;
 }());
 
