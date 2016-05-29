@@ -115,17 +115,31 @@ var main = function() {
     sgl.createShaders(['/shaders/vertex.vs', '/shaders/fragment.fs'], function(vs, fs, program) {
         sgl.clear(0.0, 0.0, 255.0);
         var gl = sgl.getGL();
-        var attLocation = gl.getAttribLocation(program, 'position');
-        var attStride = 3;
+        var attLocation = new Array(2);
+        attLocation[0] = gl.getAttribLocation(program, 'position');
+        attLocation[1] = gl.getAttribLocation(program, 'color');
+        var attStride = new Array(2);
+        attStride[0] = 3;
+        attStride[1] = 4;
+
         var vertexPosition = [
              0.0, 1.0, 0.0,
              1.0, 0.0, 0.0,
             -1.0, 0.0, 0.0
         ];
-        var vbo = sgl.createVBO(vertexPosition);
-        gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
-        gl.enableVertexAttribArray(attLocation);
-        gl.vertexAttribPointer(attLocation, attStride, gl.FLOAT, false, 0, 0);
+        var vertexColor = [
+            1.0, 0.0, 0.0, 1.0,
+            0.0, 1.0, 0.0, 1.0,
+            0.0, 0.0, 1.0, 1.0
+        ];
+        var pvbo = sgl.createVBO(vertexPosition);
+        gl.bindBuffer(gl.ARRAY_BUFFER, pvbo);
+        gl.enableVertexAttribArray(attLocation[0]);
+        gl.vertexAttribPointer(attLocation[0], attStride[0], gl.FLOAT, false, 0, 0);
+        var cvbo = sgl.createVBO(vertexColor);
+        gl.bindBuffer(gl.ARRAY_BUFFER, cvbo);
+        gl.enableVertexAttribArray(attLocation[1]);
+        gl.vertexAttribPointer(attLocation[1], attStride[1], gl.FLOAT, false, 0, 0);
         
         var minMatrix = new matIV();
         var mtxModel = minMatrix.identity(minMatrix.create());
