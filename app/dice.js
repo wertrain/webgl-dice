@@ -120,7 +120,7 @@ var main = function() {
     sgl.initalize('canvas', 640, 480);
     
     sgl.createShaders(['/shaders/vertex.vs', '/shaders/fragment.fs'], function(vs, fs, program) {
-        sgl.clear(0.0, 0.0, 255.0);
+        sgl.clear(0.0, 0.0, 0.0);
         var gl = sgl.getGL();
         var attLocation = new Array(2);
         attLocation[0] = gl.getAttribLocation(program, 'position');
@@ -128,22 +128,60 @@ var main = function() {
         var attStride = new Array(2);
         attStride[0] = 3;
         attStride[1] = 4;
-
         var vertexPosition = [
-             0.0,  1.0,  0.0,
-             1.0,  0.0,  0.0,
-            -1.0,  0.0,  0.0,
-             0.0, -1.0,  0.0
+            // Front face
+            -1.0, -1.0,  1.0,
+             1.0, -1.0,  1.0,
+             1.0,  1.0,  1.0,
+            -1.0,  1.0,  1.0,
+            // Back face
+            -1.0, -1.0, -1.0,
+            -1.0,  1.0, -1.0,
+             1.0,  1.0, -1.0,
+             1.0, -1.0, -1.0,
+            // Top face
+            -1.0,  1.0, -1.0,
+            -1.0,  1.0,  1.0,
+             1.0,  1.0,  1.0,
+             1.0,  1.0, -1.0,
+            // Bottom face
+            -1.0, -1.0, -1.0,
+             1.0, -1.0, -1.0,
+             1.0, -1.0,  1.0,
+            -1.0, -1.0,  1.0,
+            // Right face
+             1.0, -1.0, -1.0,
+             1.0,  1.0, -1.0,
+             1.0,  1.0,  1.0,
+             1.0, -1.0,  1.0,
+            // Left face
+            -1.0, -1.0, -1.0,
+            -1.0, -1.0,  1.0,
+            -1.0,  1.0,  1.0,
+            -1.0,  1.0, -1.0
         ];
-        var vertexColor = [
-            1.0, 0.0, 0.0, 1.0,
-            0.0, 1.0, 0.0, 1.0,
-            0.0, 0.0, 1.0, 1.0,
-            1.0, 1.0, 1.0, 1.0
+        var colors = [
+            [1.0,  1.0,  1.0,  1.0],    // Front face: white
+            [1.0,  0.0,  0.0,  1.0],    // Back face: red
+            [0.0,  1.0,  0.0,  1.0],    // Top face: green
+            [0.0,  0.0,  1.0,  1.0],    // Bottom face: blue
+            [1.0,  1.0,  0.0,  1.0],    // Right face: yellow
+            [1.0,  0.0,  1.0,  1.0]     // Left face: purple
         ];
+        var vertexColor = [];
+        for (var j = 0; j < 6; j++) {
+            var c = colors[j];
+            for (var i = 0; i < 4; i++) {
+                vertexColor = vertexColor.concat(c);
+            }
+        }
         var index = [
-            0, 1, 2,
-            1, 2, 3
+            0,  1,  2,      0,  2,  3,    // front
+            4,  5,  6,      4,  6,  7,    // back
+            8,  9,  10,     8,  10, 11,   // top
+            12, 13, 14,     12, 14, 15,   // bottom
+            16, 17, 18,     16, 18, 19,   // right
+            20, 21, 22,     20, 22, 23    // left
         ];
         var pvbo = sgl.createVBO(vertexPosition);
         gl.bindBuffer(gl.ARRAY_BUFFER, pvbo);
@@ -155,19 +193,23 @@ var main = function() {
         gl.vertexAttribPointer(attLocation[1], attStride[1], gl.FLOAT, false, 0, 0);
         var ibo = sgl.createIBO(index);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ibo);
-    
+
         var minMatrix = new matIV();
         var mtxModel = minMatrix.identity(minMatrix.create());
         var mtxView = minMatrix.identity(minMatrix.create());
         var mtxProj = minMatrix.identity(minMatrix.create());
         var mtxMVP = minMatrix.identity(minMatrix.create());
-        minMatrix.lookAt([0.0, 0.0, 2.0], [0, 0, 0], [0, 1, 0], mtxView);
-        minMatrix.perspective(90, sgl.getWidth() / sgl.getHeight(), 0.1, 100, mtxProj);
+        minMatrix.rotate(mtxModel, 0.6, [0, 1, 1], mtxModel);
+        
+        minMatrix.lookAt([0.0, 0.0, 4.0], [0, 0, 0], [0, 1, 0], mtxView);
+        minMatrix.perspective(60, sgl.getWidth() / sgl.getHeight(), 0.1, 100, mtxProj);
         minMatrix.multiply(mtxProj, mtxView, mtxMVP);
         minMatrix.multiply(mtxMVP, mtxModel, mtxMVP);
         
         var uniLocation = gl.getUniformLocation(program, 'mvpMatrix');
         gl.uniformMatrix4fv(uniLocation, false, mtxMVP);
+        gl.enable(gl.DEPTH_TEST);
+        gl.depthFunc(gl.LEQUAL);
         gl.drawElements(gl.TRIANGLES, index.length, gl.UNSIGNED_SHORT, 0);
         gl.flush();
     });
