@@ -130,13 +130,12 @@ var main = function() {
     sgl.initalize('canvas', 640, 480);
     
     sgl.createShaders(['/shaders/vertex.vs', '/shaders/fragment.fs'], function(vs, fs, program) {
-        sgl.clear(0.0, 0.0, 0.0);
         var gl = sgl.getGL();
-        var attLocation = new Array(2);
+        var attLocation = new Array(3);
         attLocation[0] = gl.getAttribLocation(program, 'position');
         attLocation[1] = gl.getAttribLocation(program, 'color');
         attLocation[2] = gl.getAttribLocation(program, 'textureCoord');
-        var attStride = new Array(2);
+        var attStride = new Array(3);
         attStride[0] = 3;
         attStride[1] = 4;
         attStride[2] = 2;
@@ -174,16 +173,16 @@ var main = function() {
         ];
         var colors = [
             [1.0,  1.0,  1.0,  1.0],    // Front face: white
-            [1.0,  1.0,  1.0,  1.0],    // Back face: red
-            [1.0,  1.0,  1.0,  1.0],    // Top face: green
-            [1.0,  1.0,  1.0,  1.0],    // Bottom face: blue
-            [1.0,  1.0,  1.0,  1.0],    // Right face: yellow
-            [1.0,  1.0,  1.0,  1.0]     // Left face: purple
+            [1.0,  1.0,  1.0,  1.0],    // Back face: white
+            [1.0,  1.0,  1.0,  1.0],    // Top face: white
+            [1.0,  1.0,  1.0,  1.0],    // Bottom face: white
+            [1.0,  1.0,  1.0,  1.0],    // Right face: white
+            [1.0,  1.0,  1.0,  1.0]     // Left face: white
         ];
         var vertexColor = [];
-        for (var j = 0; j < 6; j++) {
+        for (var j = 0; j < colors.length; ++j) {
             var c = colors[j];
-            for (var i = 0; i < 4; i++) {
+            for (var i = 0; i < colors[j].length; ++i) {
                 vertexColor = vertexColor.concat(c);
             }
         }
@@ -251,26 +250,27 @@ var main = function() {
             var texture = sgl.createTexture(diceImage);
             var count = 0;
             var minMatrix = new matIV();
+            var mtxView = minMatrix.identity(minMatrix.create());
+            var mtxProj = minMatrix.identity(minMatrix.create());
+            minMatrix.lookAt([0.0, 0.0, 4.0], [0, 0, 0], [0, 1, 0], mtxView);
+            minMatrix.perspective(60, sgl.getWidth() / sgl.getHeight(), 0.1, 100, mtxProj);
+            
             (function() {
                 var mtxModel = minMatrix.identity(minMatrix.create());
-                var mtxView = minMatrix.identity(minMatrix.create());
-                var mtxProj = minMatrix.identity(minMatrix.create());
                 var mtxMVP = minMatrix.identity(minMatrix.create());
                 
-                minMatrix.lookAt([0.0, 0.0, 4.0], [0, 0, 0], [0, 1, 0], mtxView);
-                minMatrix.perspective(60, sgl.getWidth() / sgl.getHeight(), 0.1, 100, mtxProj);
-                minMatrix.multiply(mtxProj, mtxView, mtxMVP);
-                minMatrix.multiply(mtxMVP, mtxModel, mtxMVP);
                 var rad = (count++ % 360) * Math.PI / 180;
                 minMatrix.rotate(mtxModel, rad, [0, 1, 1], mtxModel);
                 minMatrix.multiply(mtxProj, mtxView, mtxMVP);
                 minMatrix.multiply(mtxMVP, mtxModel, mtxMVP);
+ 
                 gl.clearColor(0.0, 0.0, 0.0, 1.0);
                 gl.clearDepth(1.0);
                 gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-                gl.activeTexture(gl.TEXTURE0);
                 gl.enable(gl.DEPTH_TEST);
                 gl.depthFunc(gl.LEQUAL);
+
+                gl.activeTexture(gl.TEXTURE0);
                 gl.bindTexture(gl.TEXTURE_2D, texture);
                 gl.uniformMatrix4fv(uniLocation[0], false, mtxMVP);
                 gl.uniform1i(uniLocation[1], 0);
