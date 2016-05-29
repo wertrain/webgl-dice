@@ -193,6 +193,16 @@ var main = function() {
             0.125, 0.0,
             0.125, 1.0,
             
+            0.625, 1.0,
+            0.625, 0.0,
+            0.75, 0.0,
+            0.75, 1.0,
+            
+            0.5, 1.0,
+            0.5, 0.0,
+            0.625, 0.0,
+            0.625, 1.0,
+            
             0.125, 1.0,
             0.125, 0.0,
             0.25, 0.0,
@@ -207,16 +217,6 @@ var main = function() {
             0.375, 0.0,
             0.5, 0.0,
             0.5, 1.0,
-
-            0.5, 1.0,
-            0.5, 0.0,
-            0.625, 0.0,
-            0.625, 1.0,
-            
-            0.625, 1.0,
-            0.625, 0.0,
-            0.75, 0.0,
-            0.75, 1.0
         ];
         var index = [
             0,  1,  2,      0,  2,  3,    // front
@@ -241,13 +241,10 @@ var main = function() {
         var ibo = sgl.createIBO(index);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ibo);
 
-
-        
         var uniLocation = new Array();
         uniLocation[0]  = gl.getUniformLocation(program, 'mvpMatrix');
         uniLocation[1]  = gl.getUniformLocation(program, 'texture');
         
-        // テクスチャ用変数の宣言
         var diceImage = new Image();
         diceImage.src = '/textures/dice.png';
         diceImage.onload = function() {
