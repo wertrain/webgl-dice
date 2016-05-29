@@ -76,12 +76,20 @@ var webgldice = {};
         this.gl.bindBuffer(this.gl.ARRAY_BUFFER, null);
         return vbo;
     };
-    SimpleGL.prototype.createIBO = function create_ibo(data){
+    SimpleGL.prototype.createIBO = function(data) {
         var ibo = this.gl.createBuffer();
         this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, ibo);
         this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, new Int16Array(data), this.gl.STATIC_DRAW);
         this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, null);
         return ibo;
+    };
+    SimpleGL.prototype.createTexture = function(data) {
+        var texture = this.gl.createTexture();
+        this.gl.bindTexture(this.gl.TEXTURE_2D, texture);
+        this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.gl.RGBA, this.gl.UNSIGNED_BYTE, data);
+        this.gl.generateMipmap(this.gl.TEXTURE_2D);
+        this.gl.bindTexture(this.gl.TEXTURE_2D, null);
+        return texture;
     };
     SimpleGL.prototype.createShaders = function(shaderFileUrls, successCallback, errorCallback) {
         var compiled = 0;
@@ -100,7 +108,9 @@ var webgldice = {};
             }
         }
         for (var i = 0; i < shaderFileUrls.length; ++i) {
-            this.loadFile(shaderFileUrls[i], i, innerCallback);
+            this.loadFile(shaderFileUrls[i], i, innerCallback, function(url){
+                console.log('Failed to load: ' + url);
+            });
         }
     };
     SimpleGL.prototype.getGL = function() {
@@ -125,9 +135,11 @@ var main = function() {
         var attLocation = new Array(2);
         attLocation[0] = gl.getAttribLocation(program, 'position');
         attLocation[1] = gl.getAttribLocation(program, 'color');
+        attLocation[2] = gl.getAttribLocation(program, 'textureCoord');
         var attStride = new Array(2);
         attStride[0] = 3;
         attStride[1] = 4;
+        attStride[2] = 2;
         var vertexPosition = [
             // Front face
             -1.0, -1.0,  1.0,
@@ -162,11 +174,11 @@ var main = function() {
         ];
         var colors = [
             [1.0,  1.0,  1.0,  1.0],    // Front face: white
-            [1.0,  0.0,  0.0,  1.0],    // Back face: red
-            [0.0,  1.0,  0.0,  1.0],    // Top face: green
-            [0.0,  0.0,  1.0,  1.0],    // Bottom face: blue
-            [1.0,  1.0,  0.0,  1.0],    // Right face: yellow
-            [1.0,  0.0,  1.0,  1.0]     // Left face: purple
+            [1.0,  1.0,  1.0,  1.0],    // Back face: red
+            [1.0,  1.0,  1.0,  1.0],    // Top face: green
+            [1.0,  1.0,  1.0,  1.0],    // Bottom face: blue
+            [1.0,  1.0,  1.0,  1.0],    // Right face: yellow
+            [1.0,  1.0,  1.0,  1.0]     // Left face: purple
         ];
         var vertexColor = [];
         for (var j = 0; j < 6; j++) {
@@ -175,6 +187,37 @@ var main = function() {
                 vertexColor = vertexColor.concat(c);
             }
         }
+        var textureCoord = [
+            0.0, 1.0,
+            0.0, 0.0,
+            0.125, 0.0,
+            0.125, 1.0,
+            
+            0.125, 1.0,
+            0.125, 0.0,
+            0.25, 0.0,
+            0.25, 1.0,
+            
+            0.25, 1.0,
+            0.25, 0.0,
+            0.375, 0.0,
+            0.375, 1.0,
+            
+            0.375, 1.0,
+            0.375, 0.0,
+            0.5, 0.0,
+            0.5, 1.0,
+
+            0.5, 1.0,
+            0.5, 0.0,
+            0.625, 0.0,
+            0.625, 1.0,
+            
+            0.625, 1.0,
+            0.625, 0.0,
+            0.75, 0.0,
+            0.75, 1.0
+        ];
         var index = [
             0,  1,  2,      0,  2,  3,    // front
             4,  5,  6,      4,  6,  7,    // back
@@ -191,26 +234,53 @@ var main = function() {
         gl.bindBuffer(gl.ARRAY_BUFFER, cvbo);
         gl.enableVertexAttribArray(attLocation[1]);
         gl.vertexAttribPointer(attLocation[1], attStride[1], gl.FLOAT, false, 0, 0);
+        var tvbo = sgl.createVBO(textureCoord);
+        gl.bindBuffer(gl.ARRAY_BUFFER, tvbo);
+        gl.enableVertexAttribArray(attLocation[2]);
+        gl.vertexAttribPointer(attLocation[2], attStride[2], gl.FLOAT, false, 0, 0);
         var ibo = sgl.createIBO(index);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ibo);
 
-        var minMatrix = new matIV();
-        var mtxModel = minMatrix.identity(minMatrix.create());
-        var mtxView = minMatrix.identity(minMatrix.create());
-        var mtxProj = minMatrix.identity(minMatrix.create());
-        var mtxMVP = minMatrix.identity(minMatrix.create());
-        minMatrix.rotate(mtxModel, 0.6, [0, 1, 1], mtxModel);
+
         
-        minMatrix.lookAt([0.0, 0.0, 4.0], [0, 0, 0], [0, 1, 0], mtxView);
-        minMatrix.perspective(60, sgl.getWidth() / sgl.getHeight(), 0.1, 100, mtxProj);
-        minMatrix.multiply(mtxProj, mtxView, mtxMVP);
-        minMatrix.multiply(mtxMVP, mtxModel, mtxMVP);
+        var uniLocation = new Array();
+        uniLocation[0]  = gl.getUniformLocation(program, 'mvpMatrix');
+        uniLocation[1]  = gl.getUniformLocation(program, 'texture');
         
-        var uniLocation = gl.getUniformLocation(program, 'mvpMatrix');
-        gl.uniformMatrix4fv(uniLocation, false, mtxMVP);
-        gl.enable(gl.DEPTH_TEST);
-        gl.depthFunc(gl.LEQUAL);
-        gl.drawElements(gl.TRIANGLES, index.length, gl.UNSIGNED_SHORT, 0);
-        gl.flush();
+        // テクスチャ用変数の宣言
+        var diceImage = new Image();
+        diceImage.src = '/textures/dice.png';
+        diceImage.onload = function() {
+            var texture = sgl.createTexture(diceImage);
+            var count = 0;
+            var minMatrix = new matIV();
+            (function() {
+                var mtxModel = minMatrix.identity(minMatrix.create());
+                var mtxView = minMatrix.identity(minMatrix.create());
+                var mtxProj = minMatrix.identity(minMatrix.create());
+                var mtxMVP = minMatrix.identity(minMatrix.create());
+                
+                minMatrix.lookAt([0.0, 0.0, 4.0], [0, 0, 0], [0, 1, 0], mtxView);
+                minMatrix.perspective(60, sgl.getWidth() / sgl.getHeight(), 0.1, 100, mtxProj);
+                minMatrix.multiply(mtxProj, mtxView, mtxMVP);
+                minMatrix.multiply(mtxMVP, mtxModel, mtxMVP);
+                var rad = (count++ % 360) * Math.PI / 180;
+                minMatrix.rotate(mtxModel, rad, [0, 1, 1], mtxModel);
+                minMatrix.multiply(mtxProj, mtxView, mtxMVP);
+                minMatrix.multiply(mtxMVP, mtxModel, mtxMVP);
+                gl.clearColor(0.0, 0.0, 0.0, 1.0);
+                gl.clearDepth(1.0);
+                gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+                gl.activeTexture(gl.TEXTURE0);
+                gl.enable(gl.DEPTH_TEST);
+                gl.depthFunc(gl.LEQUAL);
+                gl.bindTexture(gl.TEXTURE_2D, texture);
+                gl.uniformMatrix4fv(uniLocation[0], false, mtxMVP);
+                gl.uniform1i(uniLocation[1], 0);
+                gl.drawElements(gl.TRIANGLES, index.length, gl.UNSIGNED_SHORT, 0);
+                gl.flush();
+                setTimeout(arguments.callee, 1000 / 30);
+            })();
+        }
     });
 }();
