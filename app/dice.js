@@ -76,6 +76,13 @@ var webgldice = {};
         this.gl.bindBuffer(this.gl.ARRAY_BUFFER, null);
         return vbo;
     };
+    SimpleGL.prototype.createIBO = function create_ibo(data){
+        var ibo = this.gl.createBuffer();
+        this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, ibo);
+        this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, new Int16Array(data), this.gl.STATIC_DRAW);
+        this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, null);
+        return ibo;
+    };
     SimpleGL.prototype.createShaders = function(shaderFileUrls, successCallback, errorCallback) {
         var compiled = 0;
         var completed = shaderFileUrls.length;
@@ -123,14 +130,20 @@ var main = function() {
         attStride[1] = 4;
 
         var vertexPosition = [
-             0.0, 1.0, 0.0,
-             1.0, 0.0, 0.0,
-            -1.0, 0.0, 0.0
+             0.0,  1.0,  0.0,
+             1.0,  0.0,  0.0,
+            -1.0,  0.0,  0.0,
+             0.0, -1.0,  0.0
         ];
         var vertexColor = [
             1.0, 0.0, 0.0, 1.0,
             0.0, 1.0, 0.0, 1.0,
-            0.0, 0.0, 1.0, 1.0
+            0.0, 0.0, 1.0, 1.0,
+            1.0, 1.0, 1.0, 1.0
+        ];
+        var index = [
+            0, 1, 2,
+            1, 2, 3
         ];
         var pvbo = sgl.createVBO(vertexPosition);
         gl.bindBuffer(gl.ARRAY_BUFFER, pvbo);
@@ -140,20 +153,22 @@ var main = function() {
         gl.bindBuffer(gl.ARRAY_BUFFER, cvbo);
         gl.enableVertexAttribArray(attLocation[1]);
         gl.vertexAttribPointer(attLocation[1], attStride[1], gl.FLOAT, false, 0, 0);
-        
+        var ibo = sgl.createIBO(index);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ibo);
+    
         var minMatrix = new matIV();
         var mtxModel = minMatrix.identity(minMatrix.create());
         var mtxView = minMatrix.identity(minMatrix.create());
         var mtxProj = minMatrix.identity(minMatrix.create());
         var mtxMVP = minMatrix.identity(minMatrix.create());
-        minMatrix.lookAt([0.0, 1.0, 3.0], [0, 0, 0], [0, 1, 0], mtxView);
+        minMatrix.lookAt([0.0, 0.0, 2.0], [0, 0, 0], [0, 1, 0], mtxView);
         minMatrix.perspective(90, sgl.getWidth() / sgl.getHeight(), 0.1, 100, mtxProj);
         minMatrix.multiply(mtxProj, mtxView, mtxMVP);
         minMatrix.multiply(mtxMVP, mtxModel, mtxMVP);
         
         var uniLocation = gl.getUniformLocation(program, 'mvpMatrix');
         gl.uniformMatrix4fv(uniLocation, false, mtxMVP);
-        gl.drawArrays(gl.TRIANGLES, 0, 3);
+        gl.drawElements(gl.TRIANGLES, index.length, gl.UNSIGNED_SHORT, 0);
         gl.flush();
     });
 }();
