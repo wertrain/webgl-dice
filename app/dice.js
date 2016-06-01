@@ -308,10 +308,11 @@ var main = function() {
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ibo);
 
         var uniLocation = new Array();
-        uniLocation[0]  = gl.getUniformLocation(program, 'mvpMatrix');
-        uniLocation[1]  = gl.getUniformLocation(program, 'texture');
-        uniLocation[2]  = gl.getUniformLocation(program, 'invMatrix');
-        uniLocation[3]  = gl.getUniformLocation(program, 'lightDirection');
+        uniLocation[0] = gl.getUniformLocation(program, 'mvpMatrix');
+        uniLocation[1] = gl.getUniformLocation(program, 'texture');
+        uniLocation[2] = gl.getUniformLocation(program, 'invMatrix');
+        uniLocation[3] = gl.getUniformLocation(program, 'lightDirection');
+        uniLocation[4] = gl.getUniformLocation(program, 'ambientColor');
 
         var texture = sgl.createTexture(responses[2]);
         var frameCount = 0;
@@ -322,7 +323,7 @@ var main = function() {
         minMatrix.lookAt([0.0, 0.0, 4.0], [0, 0, 0], [0, 1, 0], mtxView);
         minMatrix.perspective(60, sgl.getWidth() / sgl.getHeight(), 0.1, 100, mtxProj);
         var lightDirection = [-0.5, 0.5, 0.5];
-        
+        var ambientColor = [0.1, 0.1, 0.1, 1.0];
         
         (function() {
             var mtxModel = minMatrix.identity(minMatrix.create());
@@ -336,7 +337,7 @@ var main = function() {
             minMatrix.multiply(mtxProj, mtxView, mtxMVP);
             minMatrix.multiply(mtxMVP, mtxModel, mtxMVP);
 
-            gl.clearColor(0.0, 0.0, 0.0, 1.0);
+            gl.clearColor(0.0, 0.0, 255.0, 1.0);
             gl.clearDepth(1.0);
             gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
             gl.enable(gl.DEPTH_TEST);
@@ -348,7 +349,8 @@ var main = function() {
             gl.uniform1i(uniLocation[1], 0);
             gl.uniformMatrix4fv(uniLocation[2], false, mtxInv);
             gl.uniform3fv(uniLocation[3], lightDirection);
-
+            gl.uniform4fv(uniLocation[4], ambientColor);
+            
             gl.drawElements(gl.TRIANGLES, index.length, gl.UNSIGNED_SHORT, 0);
             gl.flush();
             setTimeout(arguments.callee, 1000 / 30);
