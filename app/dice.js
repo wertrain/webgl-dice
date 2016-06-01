@@ -160,14 +160,16 @@ var main = function() {
         var program = sgl.linkProgram(vs, fs);
         gl.useProgram(program);
 
-        var attLocation = new Array(3);
+        var attLocation = new Array(4);
         attLocation[0] = gl.getAttribLocation(program, 'position');
         attLocation[1] = gl.getAttribLocation(program, 'color');
         attLocation[2] = gl.getAttribLocation(program, 'textureCoord');
-        var attStride = new Array(3);
+        attLocation[3] = gl.getAttribLocation(program, 'normal');
+        var attStride = new Array(4);
         attStride[0] = 3;
         attStride[1] = 4;
         attStride[2] = 2;
+        attStride[3] = 3;
         var vertexPosition = [
             // Front face
             -1.0, -1.0,  1.0,
@@ -246,6 +248,37 @@ var main = function() {
             0.5, 0.0,
             0.5, 1.0,
         ];
+        var vertexNormal = [
+             0.0,  0.0,  1.0,
+             0.0,  0.0,  1.0,
+             0.0,  0.0,  1.0,
+             0.0,  0.0,  1.0,
+            
+             0.0,  0.0, -1.0,
+             0.0,  0.0, -1.0,
+             0.0,  0.0, -1.0,
+             0.0,  0.0, -1.0,
+            
+             0.0,  1.0,  0.0,
+             0.0,  1.0,  0.0,
+             0.0,  1.0,  0.0,
+             0.0,  1.0,  0.0,
+            
+             0.0, -1.0,  0.0,
+             0.0, -1.0,  0.0,
+             0.0, -1.0,  0.0,
+             0.0, -1.0,  0.0,
+            
+             1.0,  0.0,  0.0,
+             1.0,  0.0,  0.0,
+             1.0,  0.0,  0.0,
+             1.0,  0.0,  0.0,
+            
+            -1.0,  0.0,  0.0,
+            -1.0,  0.0,  0.0,
+            -1.0,  0.0,  0.0,
+            -1.0,  0.0,  0.0
+        ];
         var index = [
             0,  1,  2,    0,  2,  3,    // front
             4,  5,  6,    4,  6,  7,    // back
@@ -267,25 +300,37 @@ var main = function() {
         gl.bindBuffer(gl.ARRAY_BUFFER, tvbo);
         gl.enableVertexAttribArray(attLocation[2]);
         gl.vertexAttribPointer(attLocation[2], attStride[2], gl.FLOAT, false, 0, 0);
+        var nvbo = sgl.createVBO(vertexNormal);
+        gl.bindBuffer(gl.ARRAY_BUFFER, nvbo);
+        gl.enableVertexAttribArray(attLocation[3]);
+        gl.vertexAttribPointer(attLocation[3], attStride[3], gl.FLOAT, false, 0, 0);
         var ibo = sgl.createIBO(index);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ibo);
 
         var uniLocation = new Array();
         uniLocation[0]  = gl.getUniformLocation(program, 'mvpMatrix');
         uniLocation[1]  = gl.getUniformLocation(program, 'texture');
+        uniLocation[2]  = gl.getUniformLocation(program, 'invMatrix');
+        uniLocation[3]  = gl.getUniformLocation(program, 'lightDirection');
 
         var texture = sgl.createTexture(responses[2]);
         var frameCount = 0;
         var minMatrix = new matIV();
         var mtxView = minMatrix.identity(minMatrix.create());
         var mtxProj = minMatrix.identity(minMatrix.create());
+        
         minMatrix.lookAt([0.0, 0.0, 4.0], [0, 0, 0], [0, 1, 0], mtxView);
         minMatrix.perspective(60, sgl.getWidth() / sgl.getHeight(), 0.1, 100, mtxProj);
-
+        var lightDirection = [-0.5, 0.5, 0.5];
+        
+        
         (function() {
             var mtxModel = minMatrix.identity(minMatrix.create());
             var mtxMVP = minMatrix.identity(minMatrix.create());
-
+            var mtxInv = minMatrix.identity(minMatrix.create());
+            
+            minMatrix.inverse(mtxModel, mtxInv);
+            
             var rad = (frameCount++ % 360) * Math.PI / 180;
             minMatrix.rotate(mtxModel, rad, [0, 1, 1], mtxModel);
             minMatrix.multiply(mtxProj, mtxView, mtxMVP);
@@ -301,6 +346,9 @@ var main = function() {
             gl.bindTexture(gl.TEXTURE_2D, texture);
             gl.uniformMatrix4fv(uniLocation[0], false, mtxMVP);
             gl.uniform1i(uniLocation[1], 0);
+            gl.uniformMatrix4fv(uniLocation[2], false, mtxInv);
+            gl.uniform3fv(uniLocation[3], lightDirection);
+
             gl.drawElements(gl.TRIANGLES, index.length, gl.UNSIGNED_SHORT, 0);
             gl.flush();
             setTimeout(arguments.callee, 1000 / 30);
