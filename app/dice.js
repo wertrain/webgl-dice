@@ -157,9 +157,10 @@ var main = function() {
         var gl = sgl.getGL();
         var vs = sgl.compileShader(0, responses[0]);
         var fs = sgl.compileShader(1, responses[1]);
+        var texture = sgl.createTexture(responses[2]);
         var program = sgl.linkProgram(vs, fs);
         gl.useProgram(program);
-
+        
         var attLocation = new Array(4);
         attLocation[0] = gl.getAttribLocation(program, 'position');
         attLocation[1] = gl.getAttribLocation(program, 'color');
@@ -313,35 +314,43 @@ var main = function() {
         uniLocation[2] = gl.getUniformLocation(program, 'invMatrix');
         uniLocation[3] = gl.getUniformLocation(program, 'lightDirection');
         uniLocation[4] = gl.getUniformLocation(program, 'ambientColor');
+        uniLocation[5] = gl.getUniformLocation(program, 'eyeDirection');
 
-        var texture = sgl.createTexture(responses[2]);
-        var frameCount = 0;
         var minMatrix = new matIV();
         var mtxView = minMatrix.identity(minMatrix.create());
         var mtxProj = minMatrix.identity(minMatrix.create());
+        var mtxMVP = minMatrix.identity(minMatrix.create());
+        var mtxTmp = minMatrix.identity(minMatrix.create());
+        var mtxModel = minMatrix.identity(minMatrix.create());
+        var mtxInv = minMatrix.identity(minMatrix.create());
+            
+        minMatrix.lookAt([0.0, 0.0, 6.0], [0, 0, 0], [0, 1, 0], mtxView);
+        minMatrix.perspective(45, sgl.getWidth() / sgl.getHeight(), 0.1, 100, mtxProj);
+        minMatrix.multiply(mtxProj, mtxView, mtxTmp);
         
-        minMatrix.lookAt([0.0, 0.0, 4.0], [0, 0, 0], [0, 1, 0], mtxView);
-        minMatrix.perspective(60, sgl.getWidth() / sgl.getHeight(), 0.1, 100, mtxProj);
-        var lightDirection = [-0.5, 0.5, 0.5];
+        var lightDirection = [0.5, 0.5, 0.5];
         var ambientColor = [0.1, 0.1, 0.1, 1.0];
+        var eyeDirection = [0.0, 0.0, 6.0];
         
+        gl.enable(gl.DEPTH_TEST);
+        gl.depthFunc(gl.LEQUAL);
+        gl.enable(gl.CULL_FACE);
+        
+        var frameCount = 0;
         (function() {
-            var mtxModel = minMatrix.identity(minMatrix.create());
-            var mtxMVP = minMatrix.identity(minMatrix.create());
-            var mtxInv = minMatrix.identity(minMatrix.create());
-            
-            minMatrix.inverse(mtxModel, mtxInv);
-            
-            var rad = (frameCount++ % 360) * Math.PI / 180;
-            minMatrix.rotate(mtxModel, rad, [0, 1, 1], mtxModel);
-            minMatrix.multiply(mtxProj, mtxView, mtxMVP);
-            minMatrix.multiply(mtxMVP, mtxModel, mtxMVP);
-
             gl.clearColor(0.0, 0.0, 255.0, 1.0);
             gl.clearDepth(1.0);
             gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-            gl.enable(gl.DEPTH_TEST);
-            gl.depthFunc(gl.LEQUAL);
+
+            ++frameCount;
+            
+            var rad = (frameCount % 360) * Math.PI / 180;
+            
+            minMatrix.identity(mtxModel);
+            minMatrix.rotate(mtxModel, rad, [0, 1, 1], mtxModel);
+            minMatrix.multiply(mtxTmp, mtxModel, mtxMVP);
+           
+            minMatrix.inverse(mtxModel, mtxInv);
 
             gl.activeTexture(gl.TEXTURE0);
             gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -349,6 +358,7 @@ var main = function() {
             gl.uniform1i(uniLocation[1], 0);
             gl.uniformMatrix4fv(uniLocation[2], false, mtxInv);
             gl.uniform3fv(uniLocation[3], lightDirection);
+            gl.uniform3fv(uniLocation[5], eyeDirection);
             gl.uniform4fv(uniLocation[4], ambientColor);
             
             gl.drawElements(gl.TRIANGLES, index.length, gl.UNSIGNED_SHORT, 0);
