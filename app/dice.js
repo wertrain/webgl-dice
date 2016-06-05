@@ -150,17 +150,111 @@ var webgldice = {};
     webgldice.SimpleGL = SimpleGL;
 }());
 
+(function () {
+    var SimpleAmmo = function() {
+        this.dynamicsWorld = null;
+    };
+    SimpleAmmo.prototype.initalize = function() {
+        var collisionConfiguration = new Ammo.btDefaultCollisionConfiguration();
+        var dispatcher = new Ammo.btCollisionDispatcher(collisionConfiguration);
+        var overlappingPairCache = new Ammo.btDbvtBroadphase();
+        var solver = new Ammo.btSequentialImpulseConstraintSolver();
+        this.dynamicsWorld = new Ammo.btDiscreteDynamicsWorld(
+            dispatcher, 
+            overlappingPairCache, 
+            solver, 
+            collisionConfiguration
+        );
+        // 重力の方向の設定(Y軸に対して設定)
+        this.dynamicsWorld.setGravity(new Ammo.btVector3(0, -10, 0));
+        
+        // 地面を追加
+        var ground = this._makeGround(new Ammo.btVector3(30, 1, 30), new Ammo.btVector3(0, -1, 0));
+        this.dynamicsWorld.addRigidBody(ground);
+        // オブジェクトを追加
+        this.ammoBox = this._makeBox(new Ammo.btVector3(1, 1, 1), 4, new Ammo.btVector3(0, 30, 0));
+        this.dynamicsWorld.addRigidBody(this.ammoBox);
+    };
+    SimpleAmmo.prototype.getBox = function() {
+        return this.ammoBox;
+    };
+    SimpleAmmo.prototype.update = function(frame) {
+        this.dynamicsWorld.stepSimulation(frame, 0);
+    };
+    SimpleAmmo.prototype._makeGround = function(size, pos) {
+        var form = new Ammo.btTransform();
+        form.setIdentity();
+        form.setOrigin(pos);
+        // 剛体を作成する。
+        var groundBody = new Ammo.btRigidBody(
+            // 剛体を設定する
+            new Ammo.btRigidBodyConstructionInfo(
+                0,  // 質量を0にすることで、質量無限大＝動かなくなる
+                new Ammo.btDefaultMotionState(form),  // 初期状態
+                new Ammo.btBoxShape(size), // 箱の形状。一辺が指定値の2倍になる
+                new Ammo.btVector3(0, 0, 0) // 慣性モーメント=物体の回転のしにくさ。地面は動かないので全部0
+            )
+        );
+        // 反発係数を設定
+        groundBody.setRestitution(1);
+        // 摩擦係数を設定
+        groundBody.setFriction(1);
+        return groundBody;
+    };
+    SimpleAmmo.prototype._makeBox = function(boxHalfExtents, mass, pos) {
+        var form = new Ammo.btTransform();
+        form.setIdentity();
+        form.setOrigin(pos);
+        var rotation = form.getRotation();
+        var rotationAxis = [1, 0, 1];
+        var rotationAngle = Math.random() * Math.PI;
+        rotation.setX(rotationAxis[0] * Math.sin(rotationAngle / 2));
+        rotation.setY(rotationAxis[1] * Math.sin(rotationAngle / 2));
+        rotation.setZ(rotationAxis[2] * Math.sin(rotationAngle / 2));
+        rotation.setW(Math.cos(rotationAngle / 2));
+        form.setRotation(rotation);
+        var box = new Ammo.btBoxShape(boxHalfExtents);
+        // 質量massで慣性モーメントを設定。質量が設定された剛体は以下2行で値を設定するのがお約束
+        var localInertia = new Ammo.btVector3(0, 0, 0);
+        box.calculateLocalInertia(mass, localInertia);
+        var boxBody =new Ammo.btRigidBody(
+            new Ammo.btRigidBodyConstructionInfo(
+                mass, // 質量
+                new Ammo.btDefaultMotionState(form),   // 初期状態
+                box, // 球の形状
+                localInertia // 慣性モーメント
+            )
+        );
+        // Z軸に加速度(1)を追加
+        boxBody.setLinearVelocity(new Ammo.btVector3(0,0,1));
+        // 反発係数を設定
+        boxBody.setRestitution(0.25);
+        // 摩擦係数を設定
+        boxBody.setFriction(0.6);
+        // 減衰率を設定
+        boxBody.setDamping(0, 0.08);
+        // 回転制限（1の軸でしか回転しない）
+        boxBody.setAngularFactor(new Ammo.btVector3(1, 1, 1));
+        // 滑り制限（1の軸でしか動かない。初期値には適用されない）
+        boxBody.setLinearFactor(new Ammo.btVector3(1, 1, 1 ));
+        return boxBody;
+    };
+    webgldice.SimpleAmmo = SimpleAmmo;
+}());
+
 var main = function() {
+    var sam = new webgldice.SimpleAmmo();
+    sam.initalize();
     var sgl = new webgldice.SimpleGL();
     sgl.initalize('canvas', 640, 480);
-    sgl.loadFiles(['/shaders/vertex.vs', '/shaders/fragment.fs', '/textures/dice.png'], function(responses) {
+    sgl.loadFiles(['shaders/vertex.vs', 'shaders/fragment.fs', 'textures/dice.png'], function(responses) {
         var gl = sgl.getGL();
         var vs = sgl.compileShader(0, responses[0]);
         var fs = sgl.compileShader(1, responses[1]);
         var texture = sgl.createTexture(responses[2]);
         var program = sgl.linkProgram(vs, fs);
         gl.useProgram(program);
-        
+
         var attLocation = new Array(4);
         attLocation[0] = gl.getAttribLocation(program, 'position');
         attLocation[1] = gl.getAttribLocation(program, 'color');
@@ -323,22 +417,25 @@ var main = function() {
         var mtxTmp = minMatrix.identity(minMatrix.create());
         var mtxModel = minMatrix.identity(minMatrix.create());
         var mtxInv = minMatrix.identity(minMatrix.create());
-            
-        minMatrix.lookAt([0.0, 0.0, 6.0], [0, 0, 0], [0, 1, 0], mtxView);
+        
+        var vecLook = [8.0, 8.0, 16.0]
+        minMatrix.lookAt(vecLook, [0, 0, 0], [0, 1, 0], mtxView);
         minMatrix.perspective(45, sgl.getWidth() / sgl.getHeight(), 0.1, 100, mtxProj);
         minMatrix.multiply(mtxProj, mtxView, mtxTmp);
         
         var lightDirection = [0.5, 0.5, 0.5];
         var ambientColor = [0.1, 0.1, 0.1, 1.0];
-        var eyeDirection = [0.0, 0.0, 6.0];
+        var eyeDirection = vecLook;
         
         gl.enable(gl.DEPTH_TEST);
         gl.depthFunc(gl.LEQUAL);
         gl.enable(gl.CULL_FACE);
         
+        var ammoTransform = new Ammo.btTransform();
+
         var frameCount = 0;
         (function() {
-            gl.clearColor(0.0, 0.0, 255.0, 1.0);
+            gl.clearColor(0.0, 0.0, 0.0, 1.0);
             gl.clearDepth(1.0);
             gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
@@ -347,7 +444,20 @@ var main = function() {
             var rad = (frameCount % 360) * Math.PI / 180;
             
             minMatrix.identity(mtxModel);
-            minMatrix.rotate(mtxModel, rad, [0, 1, 1], mtxModel);
+            var mtxTrans = minMatrix.identity(minMatrix.create());
+            var mtxRot = minMatrix.identity(minMatrix.create());
+            minMatrix.identity(mtxTrans);
+            minMatrix.identity(mtxRot);
+
+            var ammoBox = sam.getBox();
+            ammoBox.getMotionState().getWorldTransform(ammoTransform);
+
+            var origin = ammoTransform.getOrigin();
+            minMatrix.translate(mtxTrans, [origin.x(), origin.y(), origin.z()], mtxTrans);
+            var rotation = ammoTransform.getRotation();
+            minMatrix.rotate(mtxRot, (Math.acos(rotation.w()) * 2), [rotation.x(), rotation.y(), rotation.z()], mtxRot);
+            
+            minMatrix.multiply(mtxTrans, mtxRot, mtxModel);
             minMatrix.multiply(mtxTmp, mtxModel, mtxMVP);
            
             minMatrix.inverse(mtxModel, mtxInv);
@@ -358,12 +468,13 @@ var main = function() {
             gl.uniform1i(uniLocation[1], 0);
             gl.uniformMatrix4fv(uniLocation[2], false, mtxInv);
             gl.uniform3fv(uniLocation[3], lightDirection);
-            gl.uniform3fv(uniLocation[5], eyeDirection);
             gl.uniform4fv(uniLocation[4], ambientColor);
+            gl.uniform3fv(uniLocation[5], eyeDirection);
             
             gl.drawElements(gl.TRIANGLES, index.length, gl.UNSIGNED_SHORT, 0);
             gl.flush();
-            setTimeout(arguments.callee, 1000 / 30);
+            setTimeout(arguments.callee, 1000 / 60);
+            sam.update(1/60);
         })();
     }, function(e) {
         console.log('failed to load:' + e);
