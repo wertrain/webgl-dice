@@ -1,6 +1,6 @@
 # webgl-dice
 
-![Screenshot](https://github.com/wertrain/webgl-dice/blob/master/screenshot/01.png)
+![Screenshot](https://github.com/wertrain/webgl-dice/blob/master/screenshot/02.png)
 
 ## Demo
 
