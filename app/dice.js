@@ -172,7 +172,7 @@ var webgldice = {};
         var ground = this._makeGround(new Ammo.btVector3(30, 1, 30), new Ammo.btVector3(0, -1, 0));
         this.dynamicsWorld.addRigidBody(ground);
         // オブジェクトを追加
-        this.ammoBox = this._makeBox(new Ammo.btVector3(1, 1, 1), 4, new Ammo.btVector3(0, 30, 0));
+        this.ammoBox = this._makeBox(new Ammo.btVector3(1, 1, 1), 1, new Ammo.btVector3(0, 15, 0));
         this.dynamicsWorld.addRigidBody(this.ammoBox);
     };
     SimpleAmmo.prototype.getBox = function() {
@@ -228,11 +228,11 @@ var webgldice = {};
         // Z軸に加速度(1)を追加
         boxBody.setLinearVelocity(new Ammo.btVector3(0,0,1));
         // 反発係数を設定
-        boxBody.setRestitution(0.25);
+        boxBody.setRestitution(0.35);
         // 摩擦係数を設定
         boxBody.setFriction(0.6);
         // 減衰率を設定
-        boxBody.setDamping(0, 0.08);
+        boxBody.setDamping(0, 0.001);
         // 回転制限（1の軸でしか回転しない）
         boxBody.setAngularFactor(new Ammo.btVector3(1, 1, 1));
         // 滑り制限（1の軸でしか動かない。初期値には適用されない）
