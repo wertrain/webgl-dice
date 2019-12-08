@@ -4,7 +4,7 @@
 
 ## Demo
 
-[http://wertrain.github.io/demo/webgl-dice/](http://wertrain.github.io/demo/webgl-dice/)
+[http://wertrain.github.io/webgl-dice/](http://wertrain.github.io/webgl-dice/)
 
 ## Execute
 
@@ -14,4 +14,4 @@ Install plugins
 
 Run server
 
-    gulp 
+    gulp
