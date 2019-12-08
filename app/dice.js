@@ -9,7 +9,7 @@ var webgldice = {};
         this.canvas = document.getElementById(canvasId);
         this.canvas.width = width;
         this.canvas.height = height;
-        
+
         this.gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
         if (this.gl === null || typeof this.gl === 'undefined') {
             console.log('WebGL not supported.');
@@ -160,14 +160,14 @@ var webgldice = {};
         var overlappingPairCache = new Ammo.btDbvtBroadphase();
         var solver = new Ammo.btSequentialImpulseConstraintSolver();
         this.dynamicsWorld = new Ammo.btDiscreteDynamicsWorld(
-            dispatcher, 
-            overlappingPairCache, 
-            solver, 
+            dispatcher,
+            overlappingPairCache,
+            solver,
             collisionConfiguration
         );
         // 重力の方向の設定(Y軸に対して設定)
         this.dynamicsWorld.setGravity(new Ammo.btVector3(0, -10, 0));
-        
+
         // 地面を追加
         var ground = this._makeGround(new Ammo.btVector3(30, 1, 30), new Ammo.btVector3(0, -1, 0));
         this.dynamicsWorld.addRigidBody(ground);
@@ -247,7 +247,7 @@ var main = function() {
     sam.initalize();
     var sgl = new webgldice.SimpleGL();
     sgl.initalize('canvas', 640, 480);
-    sgl.loadFiles(['shaders/vertex.vs', 'shaders/fragment.fs', 'textures/dice.png'], function(responses) {
+    sgl.loadFiles(['app/shaders/vertex.vs', 'app/shaders/fragment.fs', 'app/textures/dice.png'], function(responses) {
         var gl = sgl.getGL();
         var vs = sgl.compileShader(0, responses[0]);
         var fs = sgl.compileShader(1, responses[1]);
@@ -317,27 +317,27 @@ var main = function() {
             0.0, 0.0,
             0.125, 0.0,
             0.125, 1.0,
-            
+
             0.625, 1.0,
             0.625, 0.0,
             0.75, 0.0,
             0.75, 1.0,
-            
+
             0.5, 1.0,
             0.5, 0.0,
             0.625, 0.0,
             0.625, 1.0,
-            
+
             0.125, 1.0,
             0.125, 0.0,
             0.25, 0.0,
             0.25, 1.0,
-            
+
             0.25, 1.0,
             0.25, 0.0,
             0.375, 0.0,
             0.375, 1.0,
-            
+
             0.375, 1.0,
             0.375, 0.0,
             0.5, 0.0,
@@ -348,27 +348,27 @@ var main = function() {
              0.0,  0.0,  1.0,
              0.0,  0.0,  1.0,
              0.0,  0.0,  1.0,
-            
+
              0.0,  0.0, -1.0,
              0.0,  0.0, -1.0,
              0.0,  0.0, -1.0,
              0.0,  0.0, -1.0,
-            
+
              0.0,  1.0,  0.0,
              0.0,  1.0,  0.0,
              0.0,  1.0,  0.0,
              0.0,  1.0,  0.0,
-            
+
              0.0, -1.0,  0.0,
              0.0, -1.0,  0.0,
              0.0, -1.0,  0.0,
              0.0, -1.0,  0.0,
-            
+
              1.0,  0.0,  0.0,
              1.0,  0.0,  0.0,
              1.0,  0.0,  0.0,
              1.0,  0.0,  0.0,
-            
+
             -1.0,  0.0,  0.0,
             -1.0,  0.0,  0.0,
             -1.0,  0.0,  0.0,
@@ -417,20 +417,20 @@ var main = function() {
         var mtxTmp = minMatrix.identity(minMatrix.create());
         var mtxModel = minMatrix.identity(minMatrix.create());
         var mtxInv = minMatrix.identity(minMatrix.create());
-        
+
         var vecLook = [8.0, 8.0, 16.0]
         minMatrix.lookAt(vecLook, [0, 0, 0], [0, 1, 0], mtxView);
         minMatrix.perspective(45, sgl.getWidth() / sgl.getHeight(), 0.1, 100, mtxProj);
         minMatrix.multiply(mtxProj, mtxView, mtxTmp);
-        
+
         var lightDirection = [0.5, 0.5, 0.5];
         var ambientColor = [0.1, 0.1, 0.1, 1.0];
         var eyeDirection = vecLook;
-        
+
         gl.enable(gl.DEPTH_TEST);
         gl.depthFunc(gl.LEQUAL);
         gl.enable(gl.CULL_FACE);
-        
+
         var ammoTransform = new Ammo.btTransform();
 
         var frameCount = 0;
@@ -440,9 +440,9 @@ var main = function() {
             gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
             ++frameCount;
-            
+
             var rad = (frameCount % 360) * Math.PI / 180;
-            
+
             minMatrix.identity(mtxModel);
             var mtxTrans = minMatrix.identity(minMatrix.create());
             var mtxRot = minMatrix.identity(minMatrix.create());
@@ -456,10 +456,10 @@ var main = function() {
             minMatrix.translate(mtxTrans, [origin.x(), origin.y(), origin.z()], mtxTrans);
             var rotation = ammoTransform.getRotation();
             minMatrix.rotate(mtxRot, (Math.acos(rotation.w()) * 2), [rotation.x(), rotation.y(), rotation.z()], mtxRot);
-            
+
             minMatrix.multiply(mtxTrans, mtxRot, mtxModel);
             minMatrix.multiply(mtxTmp, mtxModel, mtxMVP);
-           
+
             minMatrix.inverse(mtxModel, mtxInv);
 
             gl.activeTexture(gl.TEXTURE0);
@@ -470,7 +470,7 @@ var main = function() {
             gl.uniform3fv(uniLocation[3], lightDirection);
             gl.uniform4fv(uniLocation[4], ambientColor);
             gl.uniform3fv(uniLocation[5], eyeDirection);
-            
+
             gl.drawElements(gl.TRIANGLES, index.length, gl.UNSIGNED_SHORT, 0);
             gl.flush();
             setTimeout(arguments.callee, 1000 / 60);
